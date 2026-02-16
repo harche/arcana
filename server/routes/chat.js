@@ -85,6 +85,14 @@ async function consumeStream(stream, res) {
   return { content: contentBlocks, stop_reason: stopReason };
 }
 
+const DEFAULT_SYSTEM = `When using prodisco_runSandbox, ALWAYS output results as structured JSON via console.log(JSON.stringify(data)). The output is rendered in a rich UI that auto-detects the format:
+- JSON array of flat objects → interactive sortable table
+- JSON object → interactive collapsible tree viewer
+- JSON array with timestamp fields → interactive chart
+- Plain text → terminal view
+
+NEVER format output as human-readable text tables or ASCII art. Always prefer raw JSON objects/arrays so the UI can render them interactively. For example, when describing a Kubernetes resource, output the raw API object as JSON, not a formatted text summary.`;
+
 export function createChatRouter(vertexClient, mcpManager) {
   const router = Router();
 
@@ -97,6 +105,7 @@ export function createChatRouter(vertexClient, mcpManager) {
     const { messages, system } = req.body;
     const tools = mcpManager.getAnthropicTools();
     const conversationMessages = messages.map(m => ({ ...m }));
+    const systemPrompt = system || DEFAULT_SYSTEM;
 
     let iterations = 0;
     const MAX_ITERATIONS = 10;
@@ -106,7 +115,7 @@ export function createChatRouter(vertexClient, mcpManager) {
         iterations++;
 
         const stream = await vertexClient.streamMessage(
-          conversationMessages, tools, system || ''
+          conversationMessages, tools, systemPrompt
         );
 
         // Consume stream, forwarding thinking/text deltas in real-time
