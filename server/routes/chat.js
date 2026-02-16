@@ -12,6 +12,7 @@ async function consumeStream(stream, res) {
   let currentBlock = null;
   let stopReason = null;
   let thinkingText = '';
+  let signatureText = '';
   let currentText = '';
   let currentInput = '';
 
@@ -20,9 +21,9 @@ async function consumeStream(stream, res) {
       case 'content_block_start': {
         currentBlock = event.content_block;
         thinkingText = '';
+        signatureText = '';
         currentText = '';
         currentInput = '';
-        // Send start of thinking indicator
         if (currentBlock.type === 'thinking') {
           sendSSE(res, 'thinking_start', {});
         }
@@ -34,6 +35,8 @@ async function consumeStream(stream, res) {
         if (delta.type === 'thinking_delta') {
           thinkingText += delta.thinking;
           sendSSE(res, 'thinking_delta', { text: delta.thinking });
+        } else if (delta.type === 'signature_delta') {
+          signatureText += delta.signature;
         } else if (delta.type === 'text_delta') {
           currentText += delta.text;
           sendSSE(res, 'text_delta', { text: delta.text });
@@ -46,7 +49,11 @@ async function consumeStream(stream, res) {
       case 'content_block_stop': {
         if (currentBlock) {
           if (currentBlock.type === 'thinking') {
-            contentBlocks.push({ ...currentBlock, thinking: thinkingText });
+            contentBlocks.push({
+              type: 'thinking',
+              thinking: thinkingText,
+              signature: signatureText,
+            });
             sendSSE(res, 'thinking_end', {});
           } else if (currentBlock.type === 'text') {
             contentBlocks.push({ ...currentBlock, text: currentText });
