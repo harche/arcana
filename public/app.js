@@ -166,6 +166,20 @@
                 break;
               }
 
+              case 'tool_start': {
+                // Early indicator while Claude generates the tool input (code)
+                const indicator = document.createElement('div');
+                indicator.className = 'thinking-indicator';
+                indicator.id = `toolstart-${data.id}`;
+                const displayName = data.name.includes('__')
+                  ? data.name.split('__').slice(1).join('__')
+                  : data.name;
+                indicator.innerHTML = `<span class="thinking-icon">&#9679;</span> Preparing <strong>${escapeHtml(displayName)}</strong>...`;
+                contentEl.appendChild(indicator);
+                scrollToBottom();
+                break;
+              }
+
               case 'text_delta': {
                 if (hadToolCall) {
                   currentTextEl = null;
@@ -192,10 +206,14 @@
                 hadToolCall = true;
                 hadUiResource = false;
 
+                // Remove the "Preparing..." indicator
+                const startIndicator = document.getElementById(`toolstart-${data.id}`);
+                if (startIndicator) startIndicator.remove();
+
                 // Show thinking label for tool execution
                 const thinkingTool = document.createElement('div');
                 thinkingTool.className = 'thinking-indicator';
-                thinkingTool.innerHTML = `<span class="thinking-icon">&#9679;</span> Calling <strong>${escapeHtml(data.name.includes('__') ? data.name.split('__').slice(1).join('__') : data.name)}</strong>...`;
+                thinkingTool.innerHTML = `<span class="thinking-icon">&#9679;</span> Running <strong>${escapeHtml(data.name.includes('__') ? data.name.split('__').slice(1).join('__') : data.name)}</strong>...`;
                 thinkingTool.id = `thinking-${data.id}`;
                 contentEl.appendChild(thinkingTool);
 

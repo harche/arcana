@@ -26,6 +26,9 @@ async function consumeStream(stream, res) {
         currentInput = '';
         if (currentBlock.type === 'thinking') {
           sendSSE(res, 'thinking_start', {});
+        } else if (currentBlock.type === 'tool_use') {
+          // Send early indicator so UI shows activity while input streams
+          sendSSE(res, 'tool_start', { name: currentBlock.name, id: currentBlock.id });
         }
         break;
       }
