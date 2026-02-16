@@ -9,24 +9,34 @@
   let conversationHistory = [];
   let isStreaming = false;
 
+  // Wire up MCP App interactive messages (e.g. clicking a table cell)
+  if (window.mcpAppHost) {
+    window.mcpAppHost.onUserMessage = (text) => {
+      if (isStreaming) return;
+      const welcome = messagesEl.querySelector('.welcome');
+      if (welcome) welcome.remove();
+
+      conversationHistory.push({ role: 'user', content: text });
+      renderUserMessage(text);
+      scrollToBottom();
+      sendMessage();
+    };
+  }
+
   chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const text = userInput.value.trim();
     if (!text || isStreaming) return;
 
-    // Clear welcome message
     const welcome = messagesEl.querySelector('.welcome');
     if (welcome) welcome.remove();
 
-    // Add user message to history
     conversationHistory.push({ role: 'user', content: text });
 
-    // Render user message
     renderUserMessage(text);
     userInput.value = '';
     scrollToBottom();
 
-    // Send to backend
     await sendMessage();
   });
 
@@ -61,11 +71,11 @@
 
     const contentEl = createAssistantMessage();
 
-    // Add typing indicator
-    const typing = document.createElement('div');
-    typing.className = 'typing-indicator';
-    typing.innerHTML = '<span></span><span></span><span></span>';
-    contentEl.appendChild(typing);
+    // Thinking indicator
+    const thinking = document.createElement('div');
+    thinking.className = 'thinking-indicator';
+    thinking.innerHTML = '<span class="thinking-icon">&#9679;</span> Thinking...';
+    contentEl.appendChild(thinking);
     scrollToBottom();
 
     // Track text per segment (each loop iteration gets its own segment)
@@ -73,7 +83,7 @@
     let currentTextEl = null;
     let allText = '';
     let hadToolCall = false;
-    let hadUiResource = false; // suppress text after an iframe was rendered
+    let hadUiResource = false;
 
     try {
       const response = await fetch('/api/chat', {
@@ -93,9 +103,7 @@
       const decoder = new TextDecoder();
       let buffer = '';
 
-      // Remove typing indicator on first event
-      let typingRemoved = false;
-      // eventType must persist across chunks (event: and data: may arrive in separate chunks)
+      let thinkingRemoved = false;
       let eventType = null;
 
       while (true) {
@@ -110,22 +118,20 @@
           if (line.startsWith('event: ')) {
             eventType = line.slice(7);
           } else if (line.startsWith('data: ') && eventType) {
-            if (!typingRemoved) {
-              typing.remove();
-              typingRemoved = true;
+            if (!thinkingRemoved) {
+              thinking.remove();
+              thinkingRemoved = true;
             }
 
             const data = JSON.parse(line.slice(6));
 
             switch (eventType) {
               case 'text_delta': {
-                // After a tool result, start a new text segment
                 if (hadToolCall) {
                   currentTextEl = null;
                   currentSegmentText = '';
                   hadToolCall = false;
                 }
-                // Skip text rendering if a UI iframe already covers the result
                 if (hadUiResource) {
                   allText += data.text;
                   break;
@@ -144,7 +150,15 @@
 
               case 'tool_call': {
                 hadToolCall = true;
-                hadUiResource = false; // reset for new tool call
+                hadUiResource = false;
+
+                // Show thinking label for tool execution
+                const thinkingTool = document.createElement('div');
+                thinkingTool.className = 'thinking-indicator';
+                thinkingTool.innerHTML = `<span class="thinking-icon">&#9679;</span> Calling <strong>${escapeHtml(data.name.includes('__') ? data.name.split('__').slice(1).join('__') : data.name)}</strong>...`;
+                thinkingTool.id = `thinking-${data.id}`;
+                contentEl.appendChild(thinkingTool);
+
                 const toolEl = document.createElement('div');
                 toolEl.className = 'tool-call';
                 toolEl.id = `tool-${data.id}`;
@@ -177,6 +191,10 @@
               }
 
               case 'tool_result': {
+                // Remove the thinking label for this tool
+                const thinkingEl = document.getElementById(`thinking-${data.tool_use_id}`);
+                if (thinkingEl) thinkingEl.remove();
+
                 const toolEl = document.getElementById(`tool-${data.tool_use_id}`);
                 if (!toolEl) break;
 
@@ -232,16 +250,14 @@
         }
       }
 
-      // Ensure typing indicator is removed
-      if (!typingRemoved) typing.remove();
+      if (!thinkingRemoved) thinking.remove();
 
-      // Add assistant response to history
       if (allText) {
         conversationHistory.push({ role: 'assistant', content: allText });
       }
 
     } catch (error) {
-      typing.remove();
+      thinking.remove();
       const errEl = document.createElement('div');
       errEl.style.color = 'var(--error)';
       errEl.textContent = `Error: ${error.message}`;

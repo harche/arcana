@@ -5,6 +5,8 @@
     constructor() {
       this.bridges = new Map();
       this.nextId = 1;
+      // Callback for when the MCP App sends a user message (e.g. interactive cell click)
+      this.onUserMessage = null;
 
       window.addEventListener('message', (event) => {
         for (const [id, bridge] of this.bridges) {
@@ -55,12 +57,12 @@
       console.debug('[MCP App Host] Received:', data.method || `response:${data.id}`, data);
 
       if (data.method === 'ui/initialize') {
-        // Respond with host capabilities matching the ext-apps schema
         this.sendResponse(bridge, data.id, {
           protocolVersion: '2026-01-26',
           hostInfo: { name: 'mcp-chat', version: '1.0.0' },
           hostCapabilities: {
             serverTools: { callTool: true },
+            message: {},
           },
           hostContext: {
             toolInfo: {
@@ -70,19 +72,18 @@
           },
         });
         bridge.initialized = true;
-        console.debug('[MCP App Host] Initialized, sending tool data...');
 
-        // The app sends ui/notifications/initialized after processing our response.
-        // We defer sending tool data slightly to ensure the app is ready.
         setTimeout(() => {
           this.sendToolData(bridge);
         }, 50);
 
       } else if (data.method === 'ui/notifications/initialized') {
-        // App confirmed initialization - send tool data now if not already sent
         if (!bridge.toolDataSent) {
           this.sendToolData(bridge);
         }
+      } else if (data.method === 'ui/message') {
+        // Interactive cell click or action - inject as user message
+        this.handleUserMessage(bridge, data);
       } else if (data.method === 'tools/call') {
         this.proxyToolCall(bridge, data);
       } else if (data.method === 'ui/open-link') {
@@ -92,15 +93,37 @@
         }
         if (data.id) this.sendResponse(bridge, data.id, {});
       } else if (data.method === 'ui/notifications/size-changed') {
-        // App reports its content size
         const height = data.params?.height;
         if (height && height > 0) {
           bridge.iframe.style.height = Math.min(height + 20, 800) + 'px';
         }
       } else if (data.id && !data.method) {
-        // This is a response to something we sent - ignore
+        // Response to something we sent - ignore
       } else {
         console.debug('[MCP App Host] Unhandled method:', data.method);
+      }
+    }
+
+    handleUserMessage(bridge, request) {
+      const content = request.params?.content;
+      if (!content || !Array.isArray(content)) {
+        if (request.id) this.sendResponse(bridge, request.id, { isError: true });
+        return;
+      }
+
+      // Extract text from content blocks
+      const text = content
+        .filter(c => c.type === 'text')
+        .map(c => c.text)
+        .join('\n');
+
+      if (text && this.onUserMessage) {
+        this.onUserMessage(text);
+      }
+
+      // Respond to the app that the message was accepted
+      if (request.id) {
+        this.sendResponse(bridge, request.id, { isError: false });
       }
     }
 
@@ -108,15 +131,11 @@
       if (bridge.toolDataSent) return;
       bridge.toolDataSent = true;
 
-      // Send tool input (arguments)
       this.sendNotification(bridge, 'ui/notifications/tool-input', {
         arguments: bridge.toolInput,
       });
 
-      // Send tool result
       this.sendNotification(bridge, 'ui/notifications/tool-result', bridge.toolResult);
-
-      console.debug('[MCP App Host] Sent tool-input and tool-result');
     }
 
     async proxyToolCall(bridge, request) {
