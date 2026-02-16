@@ -9,7 +9,7 @@ export class VertexClient {
     this.model = 'claude-opus-4-6';
   }
 
-  async sendMessage(messages, tools = [], systemPrompt = '') {
+  async streamMessage(messages, tools = [], systemPrompt = '') {
     const params = {
       model: this.model,
       max_tokens: 16384,
@@ -18,6 +18,7 @@ export class VertexClient {
         type: 'enabled',
         budget_tokens: 4096,
       },
+      stream: true,
     };
     if (tools.length > 0) params.tools = tools;
     if (systemPrompt) params.system = systemPrompt;

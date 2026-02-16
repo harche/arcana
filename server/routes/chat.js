@@ -4,6 +4,80 @@ function sendSSE(res, event, data) {
   res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
+// Consume the Anthropic streaming response event by event,
+// forwarding thinking/text deltas to the client in real-time,
+// and collecting the full content blocks for the tool-use loop.
+async function consumeStream(stream, res) {
+  const contentBlocks = [];
+  let currentBlock = null;
+  let stopReason = null;
+  let thinkingText = '';
+  let currentText = '';
+  let currentInput = '';
+
+  for await (const event of stream) {
+    switch (event.type) {
+      case 'content_block_start': {
+        currentBlock = event.content_block;
+        thinkingText = '';
+        currentText = '';
+        currentInput = '';
+        // Send start of thinking indicator
+        if (currentBlock.type === 'thinking') {
+          sendSSE(res, 'thinking_start', {});
+        }
+        break;
+      }
+
+      case 'content_block_delta': {
+        const delta = event.delta;
+        if (delta.type === 'thinking_delta') {
+          thinkingText += delta.thinking;
+          sendSSE(res, 'thinking_delta', { text: delta.thinking });
+        } else if (delta.type === 'text_delta') {
+          currentText += delta.text;
+          sendSSE(res, 'text_delta', { text: delta.text });
+        } else if (delta.type === 'input_json_delta') {
+          currentInput += delta.partial_json;
+        }
+        break;
+      }
+
+      case 'content_block_stop': {
+        if (currentBlock) {
+          if (currentBlock.type === 'thinking') {
+            contentBlocks.push({ ...currentBlock, thinking: thinkingText });
+            sendSSE(res, 'thinking_end', {});
+          } else if (currentBlock.type === 'text') {
+            contentBlocks.push({ ...currentBlock, text: currentText });
+          } else if (currentBlock.type === 'tool_use') {
+            let parsedInput = {};
+            try { parsedInput = JSON.parse(currentInput); } catch (_) {}
+            const block = { ...currentBlock, input: parsedInput };
+            contentBlocks.push(block);
+            sendSSE(res, 'tool_call', {
+              id: block.id,
+              name: block.name,
+              input: block.input,
+            });
+          } else {
+            contentBlocks.push(currentBlock);
+          }
+        }
+        currentBlock = null;
+        break;
+      }
+
+      case 'message_delta': {
+        stopReason = event.delta?.stop_reason || stopReason;
+        break;
+      }
+    }
+  }
+
+  return { content: contentBlocks, stop_reason: stopReason };
+}
+
 export function createChatRouter(vertexClient, mcpManager) {
   const router = Router();
 
@@ -24,18 +98,12 @@ export function createChatRouter(vertexClient, mcpManager) {
       while (iterations < MAX_ITERATIONS) {
         iterations++;
 
-        const response = await vertexClient.sendMessage(
+        const stream = await vertexClient.streamMessage(
           conversationMessages, tools, system || ''
         );
 
-        // Stream thinking and text blocks
-        for (const block of response.content) {
-          if (block.type === 'thinking') {
-            sendSSE(res, 'thinking', { text: block.thinking });
-          } else if (block.type === 'text') {
-            sendSSE(res, 'text_delta', { text: block.text });
-          }
-        }
+        // Consume stream, forwarding thinking/text deltas in real-time
+        const response = await consumeStream(stream, res);
 
         if (response.stop_reason === 'end_turn' || response.stop_reason === 'max_tokens') {
           sendSSE(res, 'done', { stop_reason: response.stop_reason });
@@ -55,12 +123,6 @@ export function createChatRouter(vertexClient, mcpManager) {
         // Execute each tool call
         const toolResults = [];
         for (const toolUse of toolUseBlocks) {
-          sendSSE(res, 'tool_call', {
-            id: toolUse.id,
-            name: toolUse.name,
-            input: toolUse.input,
-          });
-
           const parts = toolUse.name.split('__');
           const serverId = parts[0];
           const toolName = parts.slice(1).join('__');
@@ -75,10 +137,6 @@ export function createChatRouter(vertexClient, mcpManager) {
             };
           }
 
-          console.log(`[MCP Result] Keys: ${Object.keys(result).join(', ')}`);
-          if (result.structuredContent) console.log(`[MCP Result] structuredContent keys: ${Object.keys(result.structuredContent).join(', ')}`);
-          if (result._meta) console.log(`[MCP Result] _meta keys: ${Object.keys(result._meta).join(', ')}`);
-
           sendSSE(res, 'tool_result', {
             tool_use_id: toolUse.id,
             content: result.content,
@@ -88,13 +146,10 @@ export function createChatRouter(vertexClient, mcpManager) {
           // Check for UI resource (MCP Apps)
           const toolMeta = mcpManager.getToolMeta(serverId, toolName);
           const uiUri = toolMeta?._meta?.ui?.resourceUri || toolMeta?._meta?.['ui/resourceUri'];
-          console.log(`[MCP UI] Tool: ${toolName}, serverId: ${serverId}, uiUri: ${uiUri || 'none'}`);
           if (uiUri) {
             try {
-              console.log(`[MCP UI] Fetching resource: ${uiUri} from server: ${serverId}`);
               const resource = await mcpManager.getResourceContent(serverId, uiUri);
               const html = resource.contents?.[0]?.text || '';
-              console.log(`[MCP UI] Got HTML: ${html.length} chars`);
               sendSSE(res, 'ui_resource', {
                 toolName: toolUse.name,
                 toolUseId: toolUse.id,
@@ -113,9 +168,8 @@ export function createChatRouter(vertexClient, mcpManager) {
                   isError: result.isError || false,
                 },
               });
-              console.log(`[MCP UI] Sent ui_resource SSE event`);
             } catch (uiErr) {
-              console.error('UI resource fetch failed:', uiErr.message, uiErr.stack);
+              console.error('UI resource fetch failed:', uiErr.message);
             }
           }
 

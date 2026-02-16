@@ -135,13 +135,34 @@
             const data = JSON.parse(line.slice(6));
 
             switch (eventType) {
-              case 'thinking': {
-                // Show Claude's thinking/reasoning
+              case 'thinking_start': {
+                // Create a collapsible thinking block that streams in
                 const thinkEl = document.createElement('details');
                 thinkEl.className = 'thinking-block';
-                thinkEl.innerHTML = `<summary>Thinking</summary><div class="thinking-text">${escapeHtml(data.text)}</div>`;
+                thinkEl.setAttribute('open', '');
+                thinkEl.innerHTML = `<summary>Thinking...</summary><div class="thinking-text"></div>`;
                 contentEl.appendChild(thinkEl);
                 scrollToBottom();
+                break;
+              }
+
+              case 'thinking_delta': {
+                // Append to the current thinking block
+                const thinkBlock = contentEl.querySelector('.thinking-block:last-of-type .thinking-text');
+                if (thinkBlock) {
+                  thinkBlock.textContent += data.text;
+                  scrollToBottom();
+                }
+                break;
+              }
+
+              case 'thinking_end': {
+                // Collapse the thinking block and update summary
+                const thinkBlock = contentEl.querySelector('.thinking-block:last-of-type');
+                if (thinkBlock) {
+                  thinkBlock.removeAttribute('open');
+                  thinkBlock.querySelector('summary').textContent = 'Thinking';
+                }
                 break;
               }
 
