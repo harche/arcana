@@ -150,10 +150,30 @@ export class MCPManager {
       throw new Error(`Server "${serverId}" not found`);
     }
     if (server.status !== 'connected') {
-      throw new Error(`Server "${serverId}" is disconnected`);
+      // Try to reconnect automatically
+      try {
+        await this.reconnectServer(serverId);
+      } catch (e) {
+        throw new Error(`Server "${serverId}" is disconnected and reconnection failed: ${e.message}`);
+      }
     }
 
-    return server.client.callTool({ name: toolName, arguments: args });
+    try {
+      return await server.client.callTool({ name: toolName, arguments: args });
+    } catch (err) {
+      // If we get a session/initialization error, try reconnecting once
+      if (err.message?.includes('not initialized') || err.message?.includes('session')) {
+        console.log(`[MCP] Reconnecting "${serverId}" after session error`);
+        try {
+          await this.reconnectServer(serverId);
+          const reconnected = this.servers.get(serverId);
+          return await reconnected.client.callTool({ name: toolName, arguments: args });
+        } catch (reconnectErr) {
+          throw new Error(`Reconnection failed: ${reconnectErr.message}`);
+        }
+      }
+      throw err;
+    }
   }
 
   async getResourceContent(serverId, uri) {
