@@ -73,6 +73,7 @@
     let currentTextEl = null;
     let allText = '';
     let hadToolCall = false;
+    let hadUiResource = false; // suppress text after an iframe was rendered
 
     try {
       const response = await fetch('/api/chat', {
@@ -124,6 +125,11 @@
                   currentSegmentText = '';
                   hadToolCall = false;
                 }
+                // Skip text rendering if a UI iframe already covers the result
+                if (hadUiResource) {
+                  allText += data.text;
+                  break;
+                }
                 if (!currentTextEl) {
                   currentTextEl = document.createElement('div');
                   currentTextEl.className = 'text-content';
@@ -138,6 +144,7 @@
 
               case 'tool_call': {
                 hadToolCall = true;
+                hadUiResource = false; // reset for new tool call
                 const toolEl = document.createElement('div');
                 toolEl.className = 'tool-call';
                 toolEl.id = `tool-${data.id}`;
@@ -189,6 +196,7 @@
 
               case 'ui_resource': {
                 if (data.html && window.mcpAppHost) {
+                  hadUiResource = true;
                   const container = document.createElement('div');
                   container.className = 'mcp-app-container';
                   contentEl.appendChild(container);

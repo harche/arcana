@@ -5,20 +5,20 @@
 }
 
 :root {
-  --bg: #1a1a2e;
-  --surface: #16213e;
-  --surface2: #0f3460;
-  --text: #e0e0e0;
-  --text-dim: #888;
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface2: #e8edf2;
+  --text: #1a1a1a;
+  --text-dim: #666;
   --accent: #e94560;
-  --accent2: #533483;
-  --user-bg: #0f3460;
-  --assistant-bg: #1e2a4a;
-  --border: #2a2a4a;
-  --success: #4caf50;
-  --error: #f44336;
-  --tool-bg: #12203a;
-  --code-bg: #0d1b2a;
+  --accent2: #6c5ce7;
+  --user-bg: #dbeafe;
+  --assistant-bg: #ffffff;
+  --border: #e0e0e0;
+  --success: #16a34a;
+  --error: #dc2626;
+  --tool-bg: #f8f9fa;
+  --code-bg: #f1f3f5;
   --radius: 8px;
 }
 
@@ -250,7 +250,6 @@ header h1 {
 }
 
 .message {
-  max-width: 85%;
   padding: 12px 16px;
   border-radius: var(--radius);
   line-height: 1.6;
@@ -258,15 +257,18 @@ header h1 {
 }
 
 .message.user {
+  max-width: 75%;
   align-self: flex-end;
   background: var(--user-bg);
-  border: 1px solid var(--surface2);
+  border: 1px solid #bfdbfe;
 }
 
 .message.assistant {
+  width: 100%;
   align-self: flex-start;
   background: var(--assistant-bg);
   border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .message.assistant .content {
@@ -308,7 +310,7 @@ header h1 {
   font-size: 11px;
 }
 
-.tool-call-header .status.running { color: #ffb74d; }
+.tool-call-header .status.running { color: #e67e22; }
 .tool-call-header .status.done { color: var(--success); }
 .tool-call-header .status.error { color: var(--error); }
 
