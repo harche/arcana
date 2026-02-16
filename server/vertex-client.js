@@ -12,8 +12,12 @@ export class VertexClient {
   async sendMessage(messages, tools = [], systemPrompt = '') {
     const params = {
       model: this.model,
-      max_tokens: 8192,
+      max_tokens: 16384,
       messages,
+      thinking: {
+        type: 'enabled',
+        budget_tokens: 4096,
+      },
     };
     if (tools.length > 0) params.tools = tools;
     if (systemPrompt) params.system = systemPrompt;

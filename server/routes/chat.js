@@ -28,9 +28,11 @@ export function createChatRouter(vertexClient, mcpManager) {
           conversationMessages, tools, system || ''
         );
 
-        // Stream text blocks
+        // Stream thinking and text blocks
         for (const block of response.content) {
-          if (block.type === 'text') {
+          if (block.type === 'thinking') {
+            sendSSE(res, 'thinking', { text: block.thinking });
+          } else if (block.type === 'text') {
             sendSSE(res, 'text_delta', { text: block.text });
           }
         }

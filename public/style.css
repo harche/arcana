@@ -480,6 +480,36 @@ header h1 {
   background: var(--surface2);
 }
 
+/* Thinking block (extended thinking) */
+.thinking-block {
+  background: var(--tool-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0;
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+.thinking-block summary {
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--accent2);
+  font-weight: 500;
+  user-select: none;
+}
+
+.thinking-block .thinking-text {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 /* Thinking indicator */
 .thinking-indicator {
   display: flex;

@@ -135,6 +135,16 @@
             const data = JSON.parse(line.slice(6));
 
             switch (eventType) {
+              case 'thinking': {
+                // Show Claude's thinking/reasoning
+                const thinkEl = document.createElement('details');
+                thinkEl.className = 'thinking-block';
+                thinkEl.innerHTML = `<summary>Thinking</summary><div class="thinking-text">${escapeHtml(data.text)}</div>`;
+                contentEl.appendChild(thinkEl);
+                scrollToBottom();
+                break;
+              }
+
               case 'text_delta': {
                 if (hadToolCall) {
                   currentTextEl = null;
