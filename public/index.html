@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Chat</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>MCP Chat</h1>
+      <span class="model-badge">claude-opus-4-6 via Vertex AI</span>
+      <button id="toggle-mcp-panel" title="Toggle MCP Servers panel">MCP Servers</button>
+    </header>
+
+    <div id="main-container">
+      <aside id="mcp-panel" class="hidden">
+        <h2>MCP Servers</h2>
+        <form id="add-server-form">
+          <input id="server-id" placeholder="Server ID (e.g. prodisco-k8s)" required>
+          <div class="type-toggle">
+            <label class="type-option selected" data-type="http">
+              <input type="radio" name="server-type" value="http" checked> HTTP
+            </label>
+            <label class="type-option" data-type="stdio">
+              <input type="radio" name="server-type" value="stdio"> Stdio
+            </label>
+          </div>
+          <div id="http-fields">
+            <input id="server-url" placeholder="URL (e.g. http://localhost:3000/mcp)">
+          </div>
+          <div id="stdio-fields" style="display:none">
+            <input id="server-command" placeholder="Command (e.g. npx)">
+            <input id="server-args" placeholder="Args (space-separated)">
+            <input id="server-env" placeholder="ENV=val ENV2=val2 (optional)">
+          </div>
+          <button type="submit">Connect</button>
+        </form>
+        <div id="server-list"></div>
+      </aside>
+
+      <main id="chat-area">
+        <div id="messages">
+          <div class="welcome">
+            <p>Send a message to start chatting with Claude Opus 4.6.</p>
+            <p>Connect MCP servers using the panel to enable tool use.</p>
+          </div>
+        </div>
+        <form id="chat-form">
+          <textarea id="user-input" placeholder="Type a message..." rows="2"></textarea>
+          <button type="submit" id="send-btn">Send</button>
+        </form>
+      </main>
+    </div>
+  </div>
+
+  <script src="markdown.js"></script>
+  <script src="mcp-app-host.js"></script>
+  <script src="mcp-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

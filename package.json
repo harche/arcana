@@ -1,0 +1,13 @@
+{
+  "name": "mcp-chat",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "@anthropic-ai/vertex-sdk": "^0.14.3",
+    "@modelcontextprotocol/sdk": "^1.26.0"
+  }
+}
