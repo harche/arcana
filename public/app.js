@@ -8,19 +8,28 @@
   // Conversation history (Anthropic format)
   let conversationHistory = [];
   let isStreaming = false;
+  let pendingUserMessage = null;
 
   // Wire up MCP App interactive messages (e.g. clicking a table cell)
   if (window.mcpAppHost) {
     window.mcpAppHost.onUserMessage = (text) => {
-      if (isStreaming) return;
-      const welcome = messagesEl.querySelector('.welcome');
-      if (welcome) welcome.remove();
-
-      conversationHistory.push({ role: 'user', content: text });
-      renderUserMessage(text);
-      scrollToBottom();
-      sendMessage();
+      if (isStreaming) {
+        // Queue the message to be sent after current stream ends
+        pendingUserMessage = text;
+        return;
+      }
+      submitUserMessage(text);
     };
+  }
+
+  function submitUserMessage(text) {
+    const welcome = messagesEl.querySelector('.welcome');
+    if (welcome) welcome.remove();
+
+    conversationHistory.push({ role: 'user', content: text });
+    renderUserMessage(text);
+    scrollToBottom();
+    sendMessage();
   }
 
   chatForm.addEventListener('submit', async (e) => {
@@ -267,6 +276,13 @@
     isStreaming = false;
     sendBtn.disabled = false;
     userInput.focus();
+
+    // Process any queued message from MCP App interactive clicks
+    if (pendingUserMessage) {
+      const msg = pendingUserMessage;
+      pendingUserMessage = null;
+      submitUserMessage(msg);
+    }
   }
 
   function scrollToBottom() {

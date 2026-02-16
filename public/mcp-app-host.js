@@ -26,10 +26,11 @@
       iframe.className = 'mcp-app';
       iframe.sandbox = 'allow-scripts';
       iframe.style.width = '100%';
-      iframe.style.minHeight = '300px';
+      iframe.style.minHeight = '100px';
       iframe.style.border = 'none';
       iframe.style.background = 'white';
       iframe.style.borderRadius = '6px';
+      iframe.style.overflow = 'hidden';
 
       this.bridges.set(iframeId, {
         iframe,
@@ -95,7 +96,8 @@
       } else if (data.method === 'ui/notifications/size-changed') {
         const height = data.params?.height;
         if (height && height > 0) {
-          bridge.iframe.style.height = Math.min(height + 20, 800) + 'px';
+          bridge.iframe.style.height = (height + 10) + 'px';
+          bridge.iframe.style.minHeight = '0';
         }
       } else if (data.id && !data.method) {
         // Response to something we sent - ignore
