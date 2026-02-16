@@ -44,8 +44,10 @@
 
       container.appendChild(iframe);
 
-      // Set srcdoc after appending to DOM so contentWindow is available
-      iframe.srcdoc = html;
+      // Inject CSS to hide "Sent"/"Sending" feedback inside the iframe
+      const hideCSS = '<style>.interactive-feedback { display: none !important; }</style>';
+      const injectedHtml = html.replace('</head>', hideCSS + '</head>');
+      iframe.srcdoc = injectedHtml;
 
       return iframeId;
     }
