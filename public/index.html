@@ -3,18 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MCP Chat</title>
+  <title>Arcana</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="app">
     <header>
-      <h1>MCP Chat</h1>
+      <h1>Arcana</h1>
       <span class="model-badge">claude-opus-4-6 via Vertex AI</span>
       <button id="toggle-mcp-panel" title="Toggle MCP Servers panel">MCP Servers</button>
     </header>
 
     <div id="main-container">
+      <aside id="history-panel">
+        <div class="history-header">
+          <h2>Chats</h2>
+          <button id="new-chat-btn" title="New Chat">+ New</button>
+        </div>
+        <div id="conversation-list"></div>
+      </aside>
+
+      <main id="chat-area">
+        <div id="messages">
+          <div class="welcome">
+            <p>Send a message to start chatting with Claude Opus 4.6.</p>
+            <p>Connect MCP servers using the panel to enable tool use.</p>
+          </div>
+        </div>
+        <form id="chat-form">
+          <textarea id="user-input" placeholder="Type a message..." rows="2"></textarea>
+          <button type="submit" id="send-btn">Send</button>
+        </form>
+      </main>
+
       <aside id="mcp-panel" class="hidden">
         <h2>MCP Servers</h2>
         <form id="add-server-form">
@@ -39,25 +60,13 @@
         </form>
         <div id="server-list"></div>
       </aside>
-
-      <main id="chat-area">
-        <div id="messages">
-          <div class="welcome">
-            <p>Send a message to start chatting with Claude Opus 4.6.</p>
-            <p>Connect MCP servers using the panel to enable tool use.</p>
-          </div>
-        </div>
-        <form id="chat-form">
-          <textarea id="user-input" placeholder="Type a message..." rows="2"></textarea>
-          <button type="submit" id="send-btn">Send</button>
-        </form>
-      </main>
     </div>
   </div>
 
   <script src="markdown.js"></script>
   <script src="mcp-app-host.js"></script>
   <script src="mcp-config.js"></script>
+  <script src="history.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

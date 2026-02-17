@@ -10,6 +10,42 @@
   let isStreaming = false;
   let pendingUserMessage = null;
 
+  // Wire up chat history sidebar
+  if (window.chatHistory) {
+    window.chatHistory.onConversationLoad = (messages) => {
+      conversationHistory = messages;
+      renderAllMessages(messages);
+    };
+    window.chatHistory.onNewChat = () => {
+      conversationHistory = [];
+      messagesEl.innerHTML = `<div class="welcome">
+        <p>Send a message to start chatting with Claude Opus 4.6.</p>
+        <p>Connect MCP servers using the panel to enable tool use.</p>
+      </div>`;
+    };
+  }
+
+  function renderAllMessages(messages) {
+    messagesEl.innerHTML = '';
+    for (const msg of messages) {
+      if (msg.role === 'user') {
+        renderUserMessage(typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content));
+      } else if (msg.role === 'assistant') {
+        const div = document.createElement('div');
+        div.className = 'message assistant';
+        const content = document.createElement('div');
+        content.className = 'content';
+        const textEl = document.createElement('div');
+        textEl.className = 'text-content';
+        textEl.innerHTML = renderMarkdown(typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content));
+        content.appendChild(textEl);
+        div.appendChild(content);
+        messagesEl.appendChild(div);
+      }
+    }
+    scrollToBottom();
+  }
+
   // Wire up MCP App interactive messages (e.g. clicking a table cell)
   if (window.mcpAppHost) {
     window.mcpAppHost.onUserMessage = (text) => {
@@ -22,14 +58,20 @@
     };
   }
 
-  function submitUserMessage(text) {
+  async function submitUserMessage(text) {
     const welcome = messagesEl.querySelector('.welcome');
     if (welcome) welcome.remove();
 
     conversationHistory.push({ role: 'user', content: text });
     renderUserMessage(text);
     scrollToBottom();
-    sendMessage();
+
+    if (window.chatHistory) {
+      await window.chatHistory.ensureConversation(text);
+      await window.chatHistory.saveMessage('user', text);
+    }
+
+    await sendMessage();
   }
 
   chatForm.addEventListener('submit', async (e) => {
@@ -45,6 +87,11 @@
     renderUserMessage(text);
     userInput.value = '';
     scrollToBottom();
+
+    if (window.chatHistory) {
+      await window.chatHistory.ensureConversation(text);
+      await window.chatHistory.saveMessage('user', text);
+    }
 
     await sendMessage();
   });
@@ -312,6 +359,10 @@
 
       if (allText) {
         conversationHistory.push({ role: 'assistant', content: allText });
+        if (window.chatHistory) {
+          await window.chatHistory.saveMessage('assistant', allText);
+          await window.chatHistory.refreshList();
+        }
       }
 
     } catch (error) {
