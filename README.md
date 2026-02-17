@@ -1,6 +1,6 @@
 # Arcana
 
-A chat interface for Claude with Model Context Protocol (MCP) server support, extended thinking, and persistent conversation history.
+A chat interface for AI agents with Model Context Protocol (MCP) server support, extended thinking, and persistent conversation history.
 
 ![Arcana](public/screenshot.png)
 
@@ -21,10 +21,27 @@ A chat interface for Claude with Model Context Protocol (MCP) server support, ex
 npm install
 ```
 
-Set your provider credentials (Vertex AI is the default):
+Set your provider credentials and start the server. The provider is auto-detected from the environment variables you set.
+
+**Vertex AI** (requires [Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials)):
 
 ```bash
-export VERTEX_PROJECT_ID=your-gcp-project-id
+export ANTHROPIC_VERTEX_PROJECT_ID=your-gcp-project-id  # or VERTEX_PROJECT_ID
+export VERTEX_REGION=us-east5                            # optional, defaults to us-east5
+npm start
+```
+
+**Anthropic API:**
+
+```bash
+export ANTHROPIC_API_KEY=your-api-key
+npm start
+```
+
+**OpenAI:**
+
+```bash
+export OPENAI_API_KEY=your-api-key
 npm start
 ```
 
@@ -34,8 +51,8 @@ Open `http://localhost:4000`.
 
 | Variable | Description | Default |
 |---|---|---|
-| `AI_PROVIDER` | `vertex`, `anthropic`, `openai`, or `openai-compatible` | `vertex` |
-| `VERTEX_PROJECT_ID` | GCP project ID (required for vertex) | — |
+| `AI_PROVIDER` | Force a provider: `vertex`, `anthropic`, `openai`, or `openai-compatible` | auto-detected |
+| `VERTEX_PROJECT_ID` / `ANTHROPIC_VERTEX_PROJECT_ID` | GCP project ID (required for vertex) | — |
 | `VERTEX_REGION` | GCP region | `us-east5` |
 | `ANTHROPIC_API_KEY` | API key (required for anthropic) | — |
 | `OPENAI_API_KEY` | API key (required for openai / openai-compatible) | — |
@@ -43,6 +60,8 @@ Open `http://localhost:4000`.
 | `MODEL_ID` | Model to use | `claude-opus-4-6` / `gpt-4o` |
 | `MAX_TOKENS` | Max response tokens | `16384` |
 | `PORT` | Server port | `4000` |
+
+When `AI_PROVIDER` is not set, the provider is auto-detected in this order: Vertex AI → Anthropic → OpenAI-compatible → OpenAI.
 
 ## Architecture
 
