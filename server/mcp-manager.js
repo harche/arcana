@@ -26,7 +26,7 @@ export class MCPManager {
     }
 
     const client = new Client(
-      { name: 'mcp-chat', version: '1.0.0' },
+      { name: 'arcana', version: '1.0.0' },
       { capabilities: {} }
     );
 

@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { stmts } from '../db.js';
+import { stmts as defaultStmts } from '../db.js';
 
-export function createConversationsRouter() {
+export function createConversationsRouter(stmts) {
+  stmts = stmts || defaultStmts;
   const router = Router();
 
   // List all conversations (most recent first)

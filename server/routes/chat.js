@@ -96,7 +96,7 @@ const DEFAULT_SYSTEM = `When using prodisco_runSandbox, ALWAYS output results as
 
 NEVER format output as human-readable text tables or ASCII art. Always prefer raw JSON objects/arrays so the UI can render them interactively. For example, when describing a Kubernetes resource, output the raw API object as JSON, not a formatted text summary.`;
 
-export function createChatRouter(vertexClient, mcpManager) {
+export function createChatRouter(aiProvider, mcpManager) {
   const router = Router();
 
   router.post('/', async (req, res) => {
@@ -117,7 +117,7 @@ export function createChatRouter(vertexClient, mcpManager) {
       while (iterations < MAX_ITERATIONS) {
         iterations++;
 
-        const stream = await vertexClient.streamMessage(
+        const stream = await aiProvider.streamMessage(
           conversationMessages, tools, systemPrompt
         );
 

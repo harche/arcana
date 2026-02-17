@@ -62,7 +62,7 @@
       if (data.method === 'ui/initialize') {
         this.sendResponse(bridge, data.id, {
           protocolVersion: '2026-01-26',
-          hostInfo: { name: 'mcp-chat', version: '1.0.0' },
+          hostInfo: { name: 'arcana', version: '1.0.0' },
           hostCapabilities: {
             serverTools: { callTool: true },
             message: {},

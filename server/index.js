@@ -7,6 +7,7 @@ import { createChatRouter } from './routes/chat.js';
 import { createMCPRouter } from './routes/mcp.js';
 import { createResourcesRouter } from './routes/resources.js';
 import { createConversationsRouter } from './routes/conversations.js';
+import { stmts } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -20,7 +21,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/chat', createChatRouter(aiProvider, mcpManager));
 app.use('/api/mcp', createMCPRouter(mcpManager));
 app.use('/api/resources', createResourcesRouter(mcpManager));
-app.use('/api/conversations', createConversationsRouter());
+app.use('/api/conversations', createConversationsRouter(stmts));
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

@@ -1,18 +1,14 @@
-import { AnthropicVertex } from '@anthropic-ai/vertex-sdk';
-
-export class VertexClient {
-  constructor() {
-    this.client = new AnthropicVertex({
-      projectId: 'itpc-gcp-hybrid-pe-eng-claude',
-      region: 'us-east5',
-    });
-    this.model = 'claude-opus-4-6';
+export class AnthropicProvider {
+  constructor(client, model, maxTokens) {
+    this.client = client;
+    this.model = model;
+    this.maxTokens = maxTokens;
   }
 
   async streamMessage(messages, tools = [], systemPrompt = '') {
     const params = {
       model: this.model,
-      max_tokens: 16384,
+      max_tokens: this.maxTokens,
       messages,
       thinking: {
         type: 'enabled',
