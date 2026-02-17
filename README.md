@@ -2,6 +2,8 @@
 
 A chat interface for Claude with Model Context Protocol (MCP) server support, extended thinking, and persistent conversation history.
 
+![Arcana](public/screenshot.png)
+
 ## Features
 
 - **Multi-provider support** — Claude via Vertex AI, Anthropic API, or OpenAI-compatible endpoints
