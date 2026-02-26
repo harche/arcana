@@ -483,7 +483,7 @@ header h1 {
 
 #send-btn {
   padding: 10px 20px;
-  background: var(--accent);
+  background: var(--accent2);
   color: white;
   border: none;
   border-radius: var(--radius);
@@ -499,6 +499,33 @@ header h1 {
 #send-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+#stop-btn {
+  padding: 10px 20px;
+  background: var(--error);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+#stop-btn:hover {
+  opacity: 0.85;
+}
+
+#send-btn.hidden,
+#stop-btn.hidden {
+  display: none;
+}
+
+.interrupted-notice {
+  color: var(--text-dim);
+  font-style: italic;
+  margin-top: 8px;
+  font-size: 13px;
 }
 
 /* Markdown content styling */

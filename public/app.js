@@ -4,11 +4,13 @@
   const chatForm = document.getElementById('chat-form');
   const userInput = document.getElementById('user-input');
   const sendBtn = document.getElementById('send-btn');
+  const stopBtn = document.getElementById('stop-btn');
 
   // Conversation history (Anthropic format)
   let conversationHistory = [];
   let isStreaming = false;
   let pendingUserMessage = null;
+  let abortController = null;
 
   // Wire up chat history sidebar
   if (window.chatHistory) {
@@ -121,9 +123,17 @@
     return content;
   }
 
+  stopBtn.addEventListener('click', () => {
+    if (abortController) {
+      abortController.abort();
+    }
+  });
+
   async function sendMessage() {
     isStreaming = true;
-    sendBtn.disabled = true;
+    abortController = new AbortController();
+    sendBtn.classList.add('hidden');
+    stopBtn.classList.remove('hidden');
 
     const contentEl = createAssistantMessage();
 
@@ -149,6 +159,7 @@
           messages: conversationHistory,
           system: '',
         }),
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
@@ -365,16 +376,37 @@
         }
       }
 
+      // Remove empty assistant bubble if no content was produced
+      if (!allText && !hadToolCall && !hadUiResource) {
+        contentEl.parentElement.remove();
+      }
+
     } catch (error) {
       thinking.remove();
-      const errEl = document.createElement('div');
-      errEl.style.color = 'var(--error)';
-      errEl.textContent = `Error: ${error.message}`;
-      contentEl.appendChild(errEl);
+      if (error.name === 'AbortError') {
+        const notice = document.createElement('div');
+        notice.className = 'interrupted-notice';
+        notice.textContent = 'Message interrupted by user';
+        // If no real content was streamed, replace the empty assistant bubble
+        // with just the notice to avoid an empty white box
+        const msgDiv = contentEl.parentElement;
+        if (!allText && !hadToolCall) {
+          msgDiv.replaceWith(notice);
+        } else {
+          contentEl.appendChild(notice);
+        }
+      } else {
+        const errEl = document.createElement('div');
+        errEl.style.color = 'var(--error)';
+        errEl.textContent = `Error: ${error.message}`;
+        contentEl.appendChild(errEl);
+      }
     }
 
     isStreaming = false;
-    sendBtn.disabled = false;
+    abortController = null;
+    stopBtn.classList.add('hidden');
+    sendBtn.classList.remove('hidden');
     userInput.focus();
 
     // Process any queued message from MCP App interactive clicks

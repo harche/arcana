@@ -7,7 +7,7 @@ function sendSSE(res, event, data) {
 // Consume the Anthropic streaming response event by event,
 // forwarding thinking/text deltas to the client in real-time,
 // and collecting the full content blocks for the tool-use loop.
-async function consumeStream(stream, res) {
+async function consumeStream(stream, res, isAborted) {
   const contentBlocks = [];
   let currentBlock = null;
   let stopReason = null;
@@ -17,6 +17,10 @@ async function consumeStream(stream, res) {
   let currentInput = '';
 
   for await (const event of stream) {
+    if (isAborted()) {
+      stream.controller?.abort();
+      break;
+    }
     switch (event.type) {
       case 'content_block_start': {
         currentBlock = event.content_block;
@@ -105,6 +109,9 @@ export function createChatRouter(aiProvider, mcpManager) {
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
 
+    let aborted = false;
+    res.on('close', () => { aborted = true; });
+
     const { messages, system } = req.body;
     const tools = mcpManager.getAnthropicTools();
     const conversationMessages = messages.map(m => ({ ...m }));
@@ -114,7 +121,7 @@ export function createChatRouter(aiProvider, mcpManager) {
     const MAX_ITERATIONS = 10;
 
     try {
-      while (iterations < MAX_ITERATIONS) {
+      while (iterations < MAX_ITERATIONS && !aborted) {
         iterations++;
 
         const stream = await aiProvider.streamMessage(
@@ -122,7 +129,7 @@ export function createChatRouter(aiProvider, mcpManager) {
         );
 
         // Consume stream, forwarding thinking/text deltas in real-time
-        const response = await consumeStream(stream, res);
+        const response = await consumeStream(stream, res, () => aborted);
 
         if (response.stop_reason === 'end_turn' || response.stop_reason === 'max_tokens') {
           sendSSE(res, 'done', { stop_reason: response.stop_reason });
@@ -139,9 +146,12 @@ export function createChatRouter(aiProvider, mcpManager) {
         // Append assistant response to conversation
         conversationMessages.push({ role: 'assistant', content: response.content });
 
+        if (aborted) break;
+
         // Execute each tool call
         const toolResults = [];
         for (const toolUse of toolUseBlocks) {
+          if (aborted) break;
           const parts = toolUse.name.split('__');
           const serverId = parts[0];
           const toolName = parts.slice(1).join('__');
@@ -219,7 +229,7 @@ export function createChatRouter(aiProvider, mcpManager) {
       sendSSE(res, 'error', { message: error.message || 'Unknown error' });
     }
 
-    res.end();
+    if (!aborted) res.end();
   });
 
   return router;
